@@ -2,3 +2,5 @@
 *.exe
 *.out
 *.app
+/cliente/cliente
+/servidor/servidor
