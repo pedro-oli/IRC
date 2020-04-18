@@ -8,7 +8,7 @@ BUILD_DIR=bin
 EXECUTABLE=cliente
 
 all: $(SOURCE_FILES) $(EXECUTABLE)
-	
+
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) -o $@ $(OBJECTS) $(LDFLAGS)
 

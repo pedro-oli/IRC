@@ -8,7 +8,7 @@ BUILD_DIR=bin
 EXECUTABLE=servidor
 
 all: $(SOURCE_FILES) $(EXECUTABLE)
-	
+
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) -o $@ $(OBJECTS) $(LDFLAGS)
 
