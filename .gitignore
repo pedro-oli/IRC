@@ -1,6 +1,3 @@
-*.o
-*.exe
-*.out
-*.app
-/cliente/cliente
-/servidor/servidor
+in
+client
+server
