@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdlib>
 #include <cstring>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -19,7 +20,7 @@ int main(int argc, char *argv[])
     if (argc < NARGS) {
 	std::cerr << "Usage: " << argv[PROGNAME]
 		  << " <port>" << std::endl;
-	exit(1);
+	return EXIT_FAILURE;
     }
 
     int status;
