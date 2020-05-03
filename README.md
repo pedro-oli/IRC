@@ -1,7 +1,7 @@
 # IRC
 Projeto de SSC0142 - Redes de Computadores
 
-Compilado com g++ versão 5.4.0 (Ubuntu 5.4.0)
+Compilado com gcc versão 5.4.0 (Ubuntu 5.4.0) / gcc versão 8.3.0 (Debian 8.3.0-6)
 
 ## Grupo
 * 10408390 Danilo Leonssio Alves
@@ -10,16 +10,15 @@ Compilado com g++ versão 5.4.0 (Ubuntu 5.4.0)
 ## Como rodar
 Abra 2 terminais:
 
-* No primeiro, encontre a pasta "servidor" e digite:
+* No primeiro, digite:
 ```
 make all
-./servidor <Porta>
+./server <Porta>
 ```
-> Ex.: ./servidor 1234
+> Ex.: ./server 1234
 
-* No segundo, encontre a pasta "cliente" e digite:
+* No segundo, digite:
 ```
-make all
-./cliente localhost <Porta> [<Apelido>]
+./client localhost <Porta> <Apelido>
 ```
-> Ex.: ./cliente localhost 1234
+> Ex.: ./client localhost 1234 pedro
