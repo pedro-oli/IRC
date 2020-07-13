@@ -55,7 +55,7 @@ void receive_messages(void* sk)
             // Verificar se é mensagem de erro
             if (serverMsg.substr(0, 15) == "Servidor: Erro!")
             {
-                cout << serverMsg << endl;
+                cout << serverMsg;
                 servidorRespondeu = true;
             }
             // Verificar se é mensagem de sucesso
@@ -81,10 +81,6 @@ void receive_messages(void* sk)
         string aux;
         cout << "Aperte Enter para fechar o programa." << endl;
         getline(cin, aux);
-    }
-    else
-    {
-        cout << "teste else" << endl; // teste
     }
     exit(0);
 }
@@ -122,6 +118,7 @@ int main(int argc, char** argv)
     // Criar estrutura pra conectar no servidor
     int port = 54000;
     string ipAddress = argv[1]; // IP, pela linha de comando (ver tcpCliente.bat)
+    // string ipAddress = "127.0.0.1"; // localhost
     sockaddr_in hint;
     hint.sin_family = AF_INET;
     hint.sin_port = htons(port);
@@ -142,12 +139,15 @@ int main(int argc, char** argv)
     // Apos mensagem de boas vindas do servidor, ler nickname ate ele ser valido:
     while (!isNicknameValid)
     {
+        // Ler novo nickname
         string nickname;
-        servidorRespondeu = false;
         getline(cin, nickname);
         ostringstream novoNicknameOSS;
         novoNicknameOSS << "/new " << nickname;
         string novoNicknameMsg = novoNicknameOSS.str();
+
+        // Resetar flag e enviar
+        servidorRespondeu = false;
         send(sock, novoNicknameMsg.c_str(), novoNicknameMsg.size() + 1, 0);
 
         // Esperar servidor aprovar:
@@ -162,10 +162,7 @@ int main(int argc, char** argv)
         // Enviar ao servidor
         int sendRes = send(sock, userInput.c_str(), userInput.size() + 1, 0);
         if (sendRes == -1 || userInput == "/quit")
-        {
-            cout << "Debug: isso eh um teste" << endl; // teste
             break;
-        }
     } while(!ctrlC);
 
     // Fechar socket

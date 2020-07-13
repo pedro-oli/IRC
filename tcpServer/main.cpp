@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/types.h>
+#include <Windows.h> // Debug: sleep
 
 #include "Cliente.h"
 #define MAXCLIENTES 100
@@ -19,6 +20,7 @@ SOCKET listening;
 Cliente clientes[MAXCLIENTES];
 vector<string> canais;
 int numero_clientes = 0;
+bool ctrlC = false;
 
 bool isNicknameValid(string str)
 {
@@ -139,7 +141,7 @@ void parseComando(SOCKET sock, string cmd)
                 if (clientes[i].GetNickname() == nickname && clientes[i].GetId() != -1)
                 {
                     ostringstream jaExisteOSS;
-                    jaExisteOSS << endl << "Servidor: Erro! Este nickname ja esta sendo usado, tente novamente:";
+                    jaExisteOSS << "Servidor: Erro! Este nickname ja esta sendo usado, tente novamente:" << endl;
                     string jaExisteMsg = jaExisteOSS.str();
                     send(sock, jaExisteMsg.c_str(), jaExisteMsg.size() + 1, 0);
                     return;
@@ -158,7 +160,7 @@ void parseComando(SOCKET sock, string cmd)
         else
         {
             ostringstream invalidoOSS;
-            invalidoOSS << endl << "Servidor: Erro! Seu nickname deve conter no maximo 50 caracteres ASCII, tente novamente: ";
+            invalidoOSS << "Servidor: Erro! Seu nickname deve conter no maximo 50 caracteres ASCII, tente novamente: " << endl;
             string invalidoMsg = invalidoOSS.str();
             send(sock, invalidoMsg.c_str(), invalidoMsg.size() + 1, 0);
         }
@@ -183,7 +185,7 @@ void parseComando(SOCKET sock, string cmd)
         {
             ostringstream canalInvalidoOSS;
             canalInvalidoOSS << endl << "Servidor: Nome de canal invalido!" << endl;
-            canalInvalidoOSS << "O nome deve comecar com #, nao conter espacos ou virgulas.";
+            canalInvalidoOSS << "O nome deve comecar com #, nao conter espacos ou virgulas." << endl;
             string canalInvalidoMsg = canalInvalidoOSS.str();
             send(sock, canalInvalidoMsg.c_str(), canalInvalidoMsg.size() + 1, 0);
         }
@@ -382,26 +384,22 @@ void finalizar()
 	while (master.fd_count > 0)
 	{
 		SOCKET sock = master.fd_array[0];
-		send(sock, terminateMsg.c_str(), terminateMsg.size() + 1, 0);
-		// Remover do master e fechar o socket atual:
-		FD_CLR(sock, &master);
-		closesocket(sock);
-	}
+        send(sock, terminateMsg.c_str(), terminateMsg.size() + 1, 0);
 
-	// Limpar winsock
-	WSACleanup();
+        // Remover do master e fechar o socket atual:
+        FD_CLR(sock, &master);
+        closesocket(sock);
+	}
+	ctrlC=true;
 }
 
 void handleCtrlC(int s)
 {
+    cout << "Voce derrubou o servidor! Desligando..." << endl; // Debug
     finalizar();
-    string aux;
-    cout << "Voce derrubou o servidor! Aperte Enter para fechar o programa." << endl;
-    getline(cin, aux);
-    exit(0);
 }
 
-int main(int argc,char** argv)
+int main(int argc, char** argv)
 {
     // Ignorar Ctrl-C
     signal(SIGINT, handleCtrlC);
@@ -440,7 +438,7 @@ int main(int argc,char** argv)
 	FD_SET(listening, &master);
 
 	// Loop do select
-	while (true)
+	while (!ctrlC)
 	{
 	    // Criar copia para ser consumida no select
 		fd_set copy = master;
@@ -476,7 +474,7 @@ int main(int argc,char** argv)
                     removeCliente(sock);
 				else
 				{
-				    // cout << "Debug: Cliente #" << sock << ": " << buf << endl; // Debug
+				    cout << "Debug: Cliente #" << sock << ": " << buf << endl; // Debug
 
 					// Verificar se cliente mandou um comando
 					if (buf[0] == '/')
@@ -504,6 +502,7 @@ int main(int argc,char** argv)
 		}
 	}
 
-	finalizar();
+    // Limpar winsock
+	WSACleanup();
 	return 0;
 }
