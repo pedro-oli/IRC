@@ -117,8 +117,8 @@ int main(int argc, char** argv)
 
     // Criar estrutura pra conectar no servidor
     int port = 54000;
-    string ipAddress = argv[1]; // IP, pela linha de comando (ver tcpCliente.bat)
-    // string ipAddress = "127.0.0.1"; // localhost
+    // string ipAddress = argv[1]; // IP, pela linha de comando (ver tcpCliente.bat)
+    string ipAddress = "127.0.0.1"; // localhost
     sockaddr_in hint;
     hint.sin_family = AF_INET;
     hint.sin_port = htons(port);
@@ -159,10 +159,14 @@ int main(int argc, char** argv)
     do {
         // Ler input
         getline(cin, userInput);
-        // Enviar ao servidor
-        int sendRes = send(sock, userInput.c_str(), userInput.size() + 1, 0);
-        if (sendRes == -1 || userInput == "/quit")
-            break;
+
+        if (userInput.size() != 0)
+        {
+            // Enviar ao servidor
+            int sendRes = send(sock, userInput.c_str(), userInput.size() + 1, 0);
+            if (sendRes == -1 || userInput == "/quit")
+                break;
+        }
     } while(!ctrlC);
 
     // Fechar socket

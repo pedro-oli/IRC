@@ -116,6 +116,44 @@ bool canalValido(string canal)
     return true;
 }
 
+void sendToChannel(string canalAtual, SOCKET sock, string buf)
+{
+    // Verificar se cliente esta mutado
+    for (int i = 0; i < MAXCLIENTES; i++)
+    {
+        if (clientes[i].GetId() == (int)sock && clientes[i].GetMute())
+        {
+            ostringstream muteOSS;
+            muteOSS << endl << "Servidor: Voce foi mutado pelo administrador do canal " << canalAtual << endl;
+            string muteMsg = muteOSS.str();
+            send(sock, muteMsg.c_str(), muteMsg.size(), 0);
+            return;
+        }
+    }
+
+    for (int i = 0; i < (signed int)master.fd_count; i++)
+    {
+        SOCKET outSock = master.fd_array[i];
+
+        // Ignorar o socket de listening
+        if (outSock != listening)
+        {
+            string sender = getClienteNickname(&sock);
+            ostringstream ss;
+
+            // Echo
+            if (outSock == sock)
+                ss << sender << ": " << buf << endl;
+            // Broadcast
+            else if (getClienteCanal(&outSock) == canalAtual)
+                ss << endl << sender << ": " << buf << endl;
+
+            string strOut = ss.str();
+            send(outSock, strOut.c_str(), strOut.size(), 0);
+        }
+    }
+}
+
 void parseComando(SOCKET sock, string cmd)
 {
     // Pegar indice do cliente que enviou o comando
@@ -201,6 +239,28 @@ void parseComando(SOCKET sock, string cmd)
                 return;
             }
 
+            // Verificar se era administrador de um canal
+            if (clientes[indexAtual].GetAdmin())
+            {
+                string canalDeletado = clientes[indexAtual].GetCanal();
+                auto itr = find(canais.begin(), canais.end(), canalDeletado);
+
+                // Deletar canal antigo
+                if (itr != canais.end())
+                    canais.erase(itr);
+
+                // Avisar quem estava no canal
+                ostringstream canalDeletadoOSS;
+                canalDeletadoOSS << "Este canal foi deletado. Digite '/join <nomeCanal>' para entrar em outro canal." << endl;
+                string canalDeletadoMsg = canalDeletadoOSS.str();
+                sendToChannel(canalDeletado, sock, canalDeletadoMsg);
+
+                // Zerar variavel _Canal de quem estava no canal
+                for (int i = 0; i < MAXCLIENTES; i++)
+                    if (clientes[i].GetCanal() == canalDeletado)
+                        clientes[i]._Canal = "";
+            }
+
             // Setar a string canal e desmutar o cliente
             clientes[indexAtual]._Canal = canal;
             clientes[indexAtual]._Mute = false;
@@ -226,6 +286,7 @@ void parseComando(SOCKET sock, string cmd)
             }
         }
     }
+
     // Nickname
     else if (cmd.substr(0, 9) == "/nickname")
     {
@@ -239,10 +300,16 @@ void parseComando(SOCKET sock, string cmd)
     // Abaixo estao os comandos exclusivos de administrador:
     else if(clientes[indexAtual].GetAdmin())
     {
+        string sender = clientes[indexAtual].GetNickname();
+
         // Kick
         if (cmd.substr(0, 5) == "/kick")
         {
             string nick = cmd.substr(6);
+            // Verificar se o objeto do comando eh o proprio admin
+            if (nick == sender)
+                return;
+
             for (int i = 0; i < MAXCLIENTES; i++)
             {
                 if (clientes[i].GetNickname() == nick)
@@ -269,15 +336,20 @@ void parseComando(SOCKET sock, string cmd)
 
             // Nao encontrou ninguem
             ostringstream whoisFailOSS;
-            whoisFailOSS << endl << "Servidor: Nao existe ninguem chamado " << nick;
+            whoisFailOSS << endl << "Servidor: Nao existe ninguem chamado " << nick << endl;
             string whoisFailMsg = whoisFailOSS.str();
             send(sock, whoisFailMsg.c_str(), whoisFailMsg.size() + 1, 0);
             return;
         }
+
         // Mute
         else if (cmd.substr(0, 5) == "/mute")
         {
             string nick = cmd.substr(6);
+            // Verificar se o objeto do comando eh o proprio admin
+            if (nick == sender)
+                return;
+
             for (int i = 0; i < MAXCLIENTES; i++)
             {
                 if (clientes[i].GetNickname() == nick)
@@ -285,7 +357,7 @@ void parseComando(SOCKET sock, string cmd)
                     clientes[i]._Mute = true;
                     // Avisar administrador
                     ostringstream muteSuccessOSS;
-                    muteSuccessOSS << endl << "Servidor: Voce mutou " << nick;
+                    muteSuccessOSS << endl << "Servidor: Voce mutou " << nick << endl;
                     string muteSuccessMsg = muteSuccessOSS.str();
                     send(sock, muteSuccessMsg.c_str(), muteSuccessMsg.size() + 1, 0);
                 }
@@ -296,6 +368,10 @@ void parseComando(SOCKET sock, string cmd)
         else if (cmd.substr(0, 7) == "/unmute")
         {
             string nick = cmd.substr(8);
+            // Verificar se o objeto do comando eh o proprio admin
+            if (nick == sender)
+                return;
+
             for (int i = 0; i < MAXCLIENTES; i++)
             {
                 if (clientes[i].GetNickname() == nick)
@@ -303,7 +379,7 @@ void parseComando(SOCKET sock, string cmd)
                     clientes[i]._Mute = false;
                     // Avisar administrador
                     ostringstream unmuteSuccessOSS;
-                    unmuteSuccessOSS << endl << "Servidor: Voce desmutou " << nick;
+                    unmuteSuccessOSS << endl << "Servidor: Voce desmutou " << nick << endl;
                     string unmuteSuccessMsg = unmuteSuccessOSS.str();
                     send(sock, unmuteSuccessMsg.c_str(), unmuteSuccessMsg.size() + 1, 0);
                 }
@@ -319,7 +395,7 @@ void parseComando(SOCKET sock, string cmd)
                 if (clientes[i].GetNickname() == nick)
                 {
                     ostringstream whoisOSS;
-                    whoisOSS << endl << "Servidor: O IP de " << nick << ": " << clientes[i].GetIp();
+                    whoisOSS << endl << "Servidor: O IP de " << nick << ": " << clientes[i].GetIp() << endl;
                     string whoisMsg = whoisOSS.str();
                     send(sock, whoisMsg.c_str(), whoisMsg.size() + 1, 0);
                     return;
@@ -328,47 +404,9 @@ void parseComando(SOCKET sock, string cmd)
 
             // Nao encontrou ninguem
             ostringstream whoisFailOSS;
-            whoisFailOSS << endl << "Servidor: Nao existe ninguem chamado " << nick;
+            whoisFailOSS << endl << "Servidor: Nao existe ninguem chamado " << nick << endl;
             string whoisFailMsg = whoisFailOSS.str();
             send(sock, whoisFailMsg.c_str(), whoisFailMsg.size() + 1, 0);
-        }
-    }
-}
-
-void sendToChannel(string canalAtual, SOCKET sock, string buf)
-{
-    // Verificar se cliente esta mutado
-    for (int i = 0; i < MAXCLIENTES; i++)
-    {
-        if (clientes[i].GetId() == (int)sock && clientes[i].GetMute())
-        {
-            ostringstream muteOSS;
-            muteOSS << endl << "Servidor: Voce foi mutado pelo administrador do canal " << canalAtual << endl;
-            string muteMsg = muteOSS.str();
-            send(sock, muteMsg.c_str(), muteMsg.size(), 0);
-            return;
-        }
-    }
-
-    for (int i = 0; i < (signed int)master.fd_count; i++)
-    {
-        SOCKET outSock = master.fd_array[i];
-
-        // Ignorar o socket de listening
-        if (outSock != listening)
-        {
-            string sender = getClienteNickname(&sock);
-            ostringstream ss;
-
-            // Echo
-            if (outSock == sock)
-                ss << sender << ": " << buf << endl;
-            // Broadcast
-            else if (getClienteCanal(&outSock) == canalAtual)
-                ss << endl << sender << ": " << buf << endl;
-
-            string strOut = ss.str();
-            send(outSock, strOut.c_str(), strOut.size(), 0);
         }
     }
 }
@@ -493,9 +531,9 @@ int main(int argc, char** argv)
                     {
                         ostringstream semCanalOSS;
 						semCanalOSS << endl << "Servidor: Voce nao esta em nenhum canal! ";
-						semCanalOSS << "Digite '/join <nomeCanal>' para entrar em algum.";
+						semCanalOSS << "Digite '/join <nomeCanal>' para entrar em algum." << endl;
 						string semCanalMsg = semCanalOSS.str();
-                        send(sock, semCanalMsg.c_str(), semCanalMsg.size() + 1, 0);
+                        send(sock, semCanalMsg.c_str(), semCanalMsg.size(), 0);
                     }
 				}
 			}
